@@ -1,5 +1,5 @@
 const core = require('@actions/core');
-const { GitHub } = require('@actions/github');
+const { GitHub, context } = require('@actions/github');
 const fs = require('fs');
 
 async function run() {
@@ -8,10 +8,23 @@ async function run() {
     const github = new GitHub(process.env.GITHUB_TOKEN);
 
     // Get the inputs from the workflow file: https://github.com/actions/toolkit/tree/master/packages/core#inputsoutputs
-    const uploadUrl = core.getInput('upload_url', { required: true });
     const assetPath = core.getInput('asset_path', { required: true });
     const assetName = core.getInput('asset_name', { required: true });
     const assetContentType = core.getInput('asset_content_type', { required: true });
+    let uploadUrl = core.getInput('upload_url');
+
+    if (!uploadUrl) {
+      const { owner, repo } = context.repo;
+      const { release: { id: releaseId } = {} } = context.payload;
+      const {
+        data: { upload_url: url }
+      } = await github.repos.getRelease({
+        owner,
+        repo,
+        release_id: releaseId
+      });
+      uploadUrl = url;
+    }
 
     // Determine content-length for header to upload asset
     const contentLength = filePath => fs.statSync(filePath).size;

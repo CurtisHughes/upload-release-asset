@@ -9,10 +9,16 @@ const run = require('../src/upload-release-asset');
 
 /* eslint-disable no-undef */
 describe('Upload Release Asset', () => {
+  let getRelease;
   let uploadReleaseAsset;
   let content;
 
   beforeEach(() => {
+    getRelease = jest.fn().mockReturnValueOnce({
+      data: {
+        upload_url: 'uploadUrl'
+      }
+    });
     uploadReleaseAsset = jest.fn().mockReturnValueOnce({
       data: {
         browser_download_url: 'browserDownloadUrl'
@@ -33,7 +39,8 @@ describe('Upload Release Asset', () => {
 
     const github = {
       repos: {
-        uploadReleaseAsset
+        uploadReleaseAsset,
+        getRelease
       }
     };
 
@@ -43,10 +50,10 @@ describe('Upload Release Asset', () => {
   test('Upload release asset endpoint is called', async () => {
     core.getInput = jest
       .fn()
-      .mockReturnValueOnce('upload_url')
       .mockReturnValueOnce('asset_path')
       .mockReturnValueOnce('asset_name')
-      .mockReturnValueOnce('asset_content_type');
+      .mockReturnValueOnce('asset_content_type')
+      .mockReturnValueOnce('upload_url');
 
     await run();
 
@@ -61,10 +68,10 @@ describe('Upload Release Asset', () => {
   test('Output is set', async () => {
     core.getInput = jest
       .fn()
-      .mockReturnValueOnce('upload_url')
       .mockReturnValueOnce('asset_path')
       .mockReturnValueOnce('asset_name')
-      .mockReturnValueOnce('asset_content_type');
+      .mockReturnValueOnce('asset_content_type')
+      .mockReturnValueOnce('upload_url');
 
     core.setOutput = jest.fn();
 
@@ -76,10 +83,10 @@ describe('Upload Release Asset', () => {
   test('Action fails elegantly', async () => {
     core.getInput = jest
       .fn()
-      .mockReturnValueOnce('upload_url')
       .mockReturnValueOnce('asset_path')
       .mockReturnValueOnce('asset_name')
-      .mockReturnValueOnce('asset_content_type');
+      .mockReturnValueOnce('asset_content_type')
+      .mockReturnValueOnce('upload_url');
 
     uploadReleaseAsset.mockRestore();
     uploadReleaseAsset.mockImplementation(() => {
@@ -95,5 +102,20 @@ describe('Upload Release Asset', () => {
     expect(uploadReleaseAsset).toHaveBeenCalled();
     expect(core.setFailed).toHaveBeenCalledWith('Error uploading release asset');
     expect(core.setOutput).toHaveBeenCalledTimes(0);
+  });
+
+  test('Upload url is optional', async () => {
+    core.getInput = jest
+      .fn()
+      .mockReturnValueOnce('asset_path')
+      .mockReturnValueOnce('asset_name')
+      .mockReturnValueOnce('asset_content_type');
+
+    core.setOutput = jest.fn();
+
+    await run();
+
+    expect(getRelease).toHaveBeenCalled();
+    expect(core.setOutput).toHaveBeenNthCalledWith(1, 'browser_download_url', 'browserDownloadUrl');
   });
 });
